@@ -3,7 +3,7 @@
 
 std::string SettingsWindowBase::GetPluginName()
 {
-	return "JoystickSelfCheckPluginClone";
+	return "Joystick Visualization";
 }
 
 void SettingsWindowBase::SetImGuiContext(uintptr_t ctx)
@@ -13,7 +13,7 @@ void SettingsWindowBase::SetImGuiContext(uintptr_t ctx)
 
 std::string PluginWindowBase::GetMenuName()
 {
-	return "JoystickSelfCheckPluginClone";
+	return "Joystick Visualization";
 }
 
 std::string PluginWindowBase::GetMenuTitle()

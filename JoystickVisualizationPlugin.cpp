@@ -1,28 +1,32 @@
 #include "pch.h"
-#include "JoystickSelfCheckPluginClone.h"
+#include "JoystickVisualizationPlugin.h"
 
-BAKKESMOD_PLUGIN(JoystickSelfCheckPluginClone, "Cool Plugin", plugin_version, PLUGINTYPE_FREEPLAY)
+BAKKESMOD_PLUGIN(JoystickVisualizationPlugin, "Joystick Visualization", plugin_version, PLUGINTYPE_FREEPLAY)
 
 std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
 
 int input_history_length = 120;
 
-void JoystickSelfCheckPluginClone::onLoad()
-{
+void JoystickVisualizationPlugin::onLoad() {
+	inputHistory.reserve(input_history_length);
+
+	gameWrapper->HookEventWithCaller<CarWrapper>(
+		"Function TAGame.Car_TA.SetVehicleInput",
+		[this](CarWrapper cw, void* params, std::string eventname) {
+			OnSetInput((ControllerInput*)params);
+		}
+	);
+
+	gameWrapper->RegisterDrawable([this](CanvasWrapper canvas) { Render(canvas); });
+
 	enabled = std::make_shared<bool>(true);
 	boxSize = std::make_shared<int>(400);
 	highlightDeadzone = std::make_shared<bool>(true);
 	useSensitivity = std::make_shared<bool>(true);
 	clampInput = std::make_shared<bool>(true);
 	pointPercentage = std::make_shared<float>(0.02);
-
-	inputHistory.reserve(input_history_length);
-
-	cvarManager->log("JoystickSelfCheckPlugin loaded");
-
-	gameWrapper->HookEventWithCaller<CarWrapper>("Function TAGame.Car_TA.SetVehicleInput", std::bind(&JoystickSelfCheckPluginClone::OnSetInput, this, std::placeholders::_1, std::placeholders::_2));
-
-	gameWrapper->RegisterDrawable(std::bind(&JoystickSelfCheckPluginClone::Render, this, std::placeholders::_1));
+	centerX = std::make_shared<float>(0.5f);
+	centerY = std::make_shared<float>(0.5f);
 
 	cvarManager->registerCvar("joystick_viz_clone_enabled", "1", "Show Joystick Visualization", true, true, 0, true, 1)
 		.bindTo(enabled);
@@ -36,26 +40,26 @@ void JoystickSelfCheckPluginClone::onLoad()
 		.bindTo(clampInput);
 	cvarManager->registerCvar("joystick_viz_clone_point_size", "0.015", "Size of Points Relative to Box", true, true, 0.0f, true, 0.1f)
 		.bindTo(pointPercentage);
+	cvarManager->registerCvar("joystick_viz_clone_center_x", "0.5", "Center of the Visualization - X", true, true, 0.0f, true, 1.0f)
+		.bindTo(centerX);
+	cvarManager->registerCvar("joystick_viz_clone_center_y", "0.5", "Center of the Visualization - Y", true, true, 0.0f, true, 1.0f)
+		.bindTo(centerY);
 }
 
-void JoystickSelfCheckPluginClone::onUnload() {
-	cvarManager->log("JoystickSelfCheckPlugin unloaded");
+void JoystickVisualizationPlugin::onUnload() {
 	gameWrapper->UnregisterDrawables();
 }
 
-bool JoystickSelfCheckPluginClone::isActive() {
+bool JoystickVisualizationPlugin::isActive() {
 	return (gameWrapper->IsInFreeplay() || gameWrapper->IsInCustomTraining())
 		&& !gameWrapper->IsPaused()
 		&& *enabled;
 }
 
-void JoystickSelfCheckPluginClone::OnSetInput(CarWrapper cw, void* params)
-{
+void JoystickVisualizationPlugin::OnSetInput(ControllerInput* ci) {
 	if (!isActive()) {
 		return;
 	}
-
-	ControllerInput* ci = (ControllerInput*)params;
 
 	if (inputHistory.size() >= input_history_length) {
 		int numToRemove = 1 + inputHistory.size() - input_history_length;
@@ -65,8 +69,7 @@ void JoystickSelfCheckPluginClone::OnSetInput(CarWrapper cw, void* params)
 	inputHistory.push_back(*ci);
 }
 
-void JoystickSelfCheckPluginClone::Render(CanvasWrapper canvas)
-{
+void JoystickVisualizationPlugin::Render(CanvasWrapper canvas) {
 	if (!isActive()) {
 		return;
 	}
@@ -75,7 +78,10 @@ void JoystickSelfCheckPluginClone::Render(CanvasWrapper canvas)
 	float boxSizeWithPadding = (*boxSize) + pointSize;
 
 	Vector2 canvasSize = canvas.GetSize();
-	Vector2F canvasCenter = Vector2F(canvasSize.X / 2.0f, canvasSize.Y / 2.0f);
+	Vector2F canvasCenter = Vector2F(
+		std::lerp(0, canvasSize.X - boxSizeWithPadding, *centerX),
+		std::lerp(0, canvasSize.Y - boxSizeWithPadding, *centerY)
+	) + (boxSizeWithPadding / 2.0f);
 
 	canvas.SetColor(255, 255, 255, 100);
 	canvas.SetPosition(Vector2F(canvasCenter.X - boxSizeWithPadding / 2.0f, canvasCenter.Y - boxSizeWithPadding / 2.0f));
@@ -114,9 +120,13 @@ void JoystickSelfCheckPluginClone::Render(CanvasWrapper canvas)
 	}
 }
 
-void JoystickSelfCheckPluginClone::RenderSettings() {
-	ImGui::Text("Enable the joystick visualization to self - check accuracy of joystick inputs, externally configured deadzone shape and sensitivity, etc.");
+static void Separator() {
+	ImGui::Spacing();
+	ImGui::Separator();
+	ImGui::Spacing();
+}
 
+void JoystickVisualizationPlugin::RenderSettings() {
 	CVarWrapper enableCvar = cvarManager->getCvar("joystick_viz_clone_enabled");
 	if (!enableCvar) { return; }
 	bool enabled = enableCvar.getBoolValue();
@@ -145,11 +155,36 @@ void JoystickSelfCheckPluginClone::RenderSettings() {
 		clampCvar.setValue(clamp);
 	}
 
+	Separator();
+	ImGui::Text("Sizing");
+
 	CVarWrapper sizeCvar = cvarManager->getCvar("joystick_viz_clone_size");
 	if (!sizeCvar) { return; }
 	int size = sizeCvar.getIntValue();
 	if (ImGui::SliderInt("Visualization Size", &size, 100, 1000)) {
 		sizeCvar.setValue(size);
+	}
+
+	CVarWrapper centerXCvar = cvarManager->getCvar("joystick_viz_clone_center_x");
+	if (!centerXCvar) { return; }
+	float centerX = centerXCvar.getFloatValue() * 100;
+	if (ImGui::SliderFloat("Center X", &centerX, 0.0f, 100.0f, "%.1f %%")) {
+		centerXCvar.setValue(centerX / 100.0f);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Center##X")) {
+		centerXCvar.setValue(0.5f);
+	}
+
+	CVarWrapper centerYCvar = cvarManager->getCvar("joystick_viz_clone_center_y");
+	if (!centerYCvar) { return; }
+	float centerY = centerYCvar.getFloatValue() * 100;
+	if (ImGui::SliderFloat("Center Y", &centerY, 0.0f, 100.0f, "%.1f %%")) {
+		centerYCvar.setValue(centerY / 100.0f);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Center##Y")) {
+		centerYCvar.setValue(0.5f);
 	}
 
 	CVarWrapper pointSizeCvar = cvarManager->getCvar("joystick_viz_clone_point_size");
@@ -159,16 +194,21 @@ void JoystickSelfCheckPluginClone::RenderSettings() {
 		pointSizeCvar.setValue(pointSize / 100.0f);
 	}
 
+	Separator();
+
+	ImGui::Text("Tips");
 	ImGui::Text(
-		"Self - Check Protips :\n"
-		"-Joystick should trace smooth and consistent lines\n"
-		"-Jagged / inconsistent traces may indicate controller needs to be repaired / replaced.Try using compressed air to clean out sensor.\n"
-		"-Try rotating joystick all the way around edge in a circle\n"
-		"-Default deadzone shape and sensitivity should trace a circle\n"
-		"-Setting a higher sensitivity with an external tool(such as DS4Win or Steam controller config) will increase size of circle and cut off edges\n"
-		"-A squared deadzone(changed in Steam controller config) should instead trace a square\n"
-		"-NOTE: In - game sensitivity is NOT reflected in visualization\n"
-		"-See plugin homepage for examples and more information\n"
-		"Created by AlpacaFlightSim#0001 / @AlpacaFlightSim\n"
+		"- Joystick should trace smooth and consistent lines.\n"
+		"- Jagged / inconsistent traces may indicate controller needs to be repaired or replaced. Try using compressed air to clean out the sensor.\n"
+		"- Try rotating the joystick all the way around edge in a circle.\n"
+		"- The default deadzone shape and sensitivity should trace a circle.\n"
+		"- Setting a higher sensitivity with an external tool (such as DS4Win or Steam controller config) will increase the size of circle and cut off edges.\n"
+		"- A squared deadzone (configured in external tools) should instead trace a square.\n"
+		"- The visualization ignores inputs within the deadzone. Only inputs affecting the movement of the car are shown. This is a limitation in Bakkesmod.\n"
+		"- See plugin homepage for examples and more information´."
 	);
+
+	Separator();
+
+	ImGui::Text("Originally created by @AlpacaFlightSim, updated by @Brotzeitsepp.");
 }

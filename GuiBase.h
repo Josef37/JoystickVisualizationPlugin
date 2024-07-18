@@ -15,7 +15,7 @@ public:
 	virtual ~PluginWindowBase() = default;
 
 	bool isWindowOpen_ = false;
-	std::string menuTitle_ = "JoystickSelfCheckPluginClone";
+	std::string menuTitle_ = "Joystick Visualization";
 
 	std::string GetMenuName() override;
 	std::string GetMenuTitle() override;

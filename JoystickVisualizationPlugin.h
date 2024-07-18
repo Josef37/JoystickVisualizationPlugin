@@ -9,7 +9,7 @@
 constexpr auto plugin_version = stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR) "." stringify(VERSION_PATCH) "." stringify(VERSION_BUILD);
 
 
-class JoystickSelfCheckPluginClone : public BakkesMod::Plugin::BakkesModPlugin,
+class JoystickVisualizationPlugin : public BakkesMod::Plugin::BakkesModPlugin,
 	public SettingsWindowBase
 {
 	std::vector<ControllerInput> inputHistory;
@@ -19,10 +19,12 @@ class JoystickSelfCheckPluginClone : public BakkesMod::Plugin::BakkesModPlugin,
 	std::shared_ptr<bool> useSensitivity;
 	std::shared_ptr<bool> clampInput;
 	std::shared_ptr<float> pointPercentage;
+	std::shared_ptr<float> centerX;
+	std::shared_ptr<float> centerY;
 
 	void onLoad() override;
 	void onUnload() override;
-	void OnSetInput(CarWrapper cw, void* params);
+	void OnSetInput(ControllerInput* ci);
 	void Render(CanvasWrapper canvas);
 	void RenderSettings() override;
 	bool isActive();
