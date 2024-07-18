@@ -8,6 +8,17 @@
 #include "version.h"
 constexpr auto plugin_version = stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR) "." stringify(VERSION_PATCH) "." stringify(VERSION_BUILD);
 
+constexpr auto JOYSTICK_VIS_ENABLED = "joystick_vis_enabled";
+constexpr auto JOYSTICK_VIS_POINT_COUNT = "joystick_vis_point_count";
+constexpr auto JOYSTICK_VIS_SIZE = "joystick_vis_size";
+constexpr auto JOYSTICK_VIS_SENSITIVITY = "joystick_vis_sensitivity";
+constexpr auto JOYSTICK_VIS_CLAMP = "joystick_vis_clamp";
+constexpr auto JOYSTICK_VIS_POINT_SIZE = "joystick_vis_point_size";
+constexpr auto JOYSTICK_VIS_CENTER_X = "joystick_vis_center_x";
+constexpr auto JOYSTICK_VIS_CENTER_Y = "joystick_vis_center_y";
+constexpr auto JOYSTICK_VIS_COLOR_BOX = "joystick_vis_color_box";
+constexpr auto JOYSTICK_VIS_COLOR_POINT = "joystick_vis_color_point";
+constexpr auto JOYSTICK_VIS_COLOR_DEADZONE = "joystick_vis_color_deadzone";
 
 class JoystickVisualizationPlugin : public BakkesMod::Plugin::BakkesModPlugin, public SettingsWindowBase
 {
