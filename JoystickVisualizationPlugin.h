@@ -15,12 +15,14 @@ class JoystickVisualizationPlugin : public BakkesMod::Plugin::BakkesModPlugin,
 	std::vector<ControllerInput> inputHistory;
 	std::shared_ptr<int> boxSize;
 	std::shared_ptr<bool> enabled;
-	std::shared_ptr<bool> highlightDeadzone;
 	std::shared_ptr<bool> useSensitivity;
 	std::shared_ptr<bool> clampInput;
 	std::shared_ptr<float> pointPercentage;
 	std::shared_ptr<float> centerX;
 	std::shared_ptr<float> centerY;
+	std::shared_ptr<LinearColor> boxColor;
+	std::shared_ptr<LinearColor> pointColor;
+	std::shared_ptr<LinearColor> pointColorDeadzone;
 
 	void onLoad() override;
 	void onUnload() override;

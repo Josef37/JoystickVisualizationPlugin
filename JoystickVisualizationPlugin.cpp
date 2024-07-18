@@ -21,19 +21,19 @@ void JoystickVisualizationPlugin::onLoad() {
 
 	enabled = std::make_shared<bool>(true);
 	boxSize = std::make_shared<int>(400);
-	highlightDeadzone = std::make_shared<bool>(true);
 	useSensitivity = std::make_shared<bool>(true);
 	clampInput = std::make_shared<bool>(true);
 	pointPercentage = std::make_shared<float>(0.02);
 	centerX = std::make_shared<float>(0.5f);
 	centerY = std::make_shared<float>(0.5f);
+	boxColor = std::make_shared<LinearColor>();
+	pointColor = std::make_shared<LinearColor>();
+	pointColorDeadzone = std::make_shared<LinearColor>();
 
 	cvarManager->registerCvar("joystick_viz_clone_enabled", "1", "Show Joystick Visualization", true, true, 0, true, 1)
 		.bindTo(enabled);
 	cvarManager->registerCvar("joystick_viz_clone_size", "400", "Joystick Visualization Size", true, true, 100, true, 1000)
 		.bindTo(boxSize);
-	cvarManager->registerCvar("joystick_viz_clone_deadzone", "1", "Highlight Points in Deadzone", true, true, 0, true, 1)
-		.bindTo(highlightDeadzone);
 	cvarManager->registerCvar("joystick_viz_clone_sensitivity", "1", "Scale Input with Aerial Sensitivity", true, true, 0, true, 1)
 		.bindTo(useSensitivity);
 	cvarManager->registerCvar("joystick_viz_clone_clamp", "1", "Clamp Values to Max Input", true, true, 0, true, 1)
@@ -44,6 +44,12 @@ void JoystickVisualizationPlugin::onLoad() {
 		.bindTo(centerX);
 	cvarManager->registerCvar("joystick_viz_clone_center_y", "0.5", "Center of the Visualization - Y", true, true, 0.0f, true, 1.0f)
 		.bindTo(centerY);
+	cvarManager->registerCvar("joystick_viz_clone_color_box", "#FFFFFF64", "Box Color")
+		.bindTo(boxColor);	
+	cvarManager->registerCvar("joystick_viz_clone_color_point", "#FFFFFF", "Point Color")
+		.bindTo(pointColor);
+	cvarManager->registerCvar("joystick_viz_clone_color_deadzone", "#FFFFFF", "Point Color in Deadzone")
+		.bindTo(pointColorDeadzone);
 }
 
 void JoystickVisualizationPlugin::onUnload() {
@@ -83,7 +89,7 @@ void JoystickVisualizationPlugin::Render(CanvasWrapper canvas) {
 		std::lerp(0, canvasSize.Y - boxSizeWithPadding, *centerY)
 	) + (boxSizeWithPadding / 2.0f);
 
-	canvas.SetColor(255, 255, 255, 100);
+	canvas.SetColor(*boxColor);
 	canvas.SetPosition(Vector2F(canvasCenter.X - boxSizeWithPadding / 2.0f, canvasCenter.Y - boxSizeWithPadding / 2.0f));
 	canvas.DrawBox(Vector2F(boxSizeWithPadding, boxSizeWithPadding));
 
@@ -103,10 +109,11 @@ void JoystickVisualizationPlugin::Render(CanvasWrapper canvas) {
 		Vector2F input = *clampInput ? clampedInput : rawInput;
 		Vector2F currentPos = canvasCenter + input * (*boxSize) / 2.0f;
 
-		float alpha = 255 * (1 - i / (float)input_history_length);
+		float opacity = 1 - i / (float)input_history_length;
 		bool isInDeadzone = input.X == 0.0f || input.Y == 0.0f;
-		int blue = isInDeadzone && *highlightDeadzone ? 0 : 255;
-		canvas.SetColor(255, 255, blue, alpha);
+		LinearColor color = isInDeadzone ? *pointColorDeadzone : *pointColor;
+		color.A *= opacity;
+		canvas.SetColor(color);
 		Vector2F offset = Vector2F(pointSize / 2.0, pointSize / 2.0);
 		canvas.SetPosition(currentPos - offset);
 		canvas.FillBox(Vector2F(pointSize, pointSize));
@@ -134,13 +141,6 @@ void JoystickVisualizationPlugin::RenderSettings() {
 		enableCvar.setValue(enabled);
 	}
 
-	CVarWrapper deadzoneCvar = cvarManager->getCvar("joystick_viz_clone_deadzone");
-	if (!deadzoneCvar) { return; }
-	bool deadzone = deadzoneCvar.getBoolValue();
-	if (ImGui::Checkbox("Highlight Points in Deadzone", &deadzone)) {
-		deadzoneCvar.setValue(deadzone);
-	}
-
 	CVarWrapper sensitivityCvar = cvarManager->getCvar("joystick_viz_clone_sensitivity");
 	if (!sensitivityCvar) { return; }
 	bool sensitivity = sensitivityCvar.getBoolValue();
@@ -153,6 +153,39 @@ void JoystickVisualizationPlugin::RenderSettings() {
 	bool clamp = clampCvar.getBoolValue();
 	if (ImGui::Checkbox("Clamp Values to Max Input", &clamp)) {
 		clampCvar.setValue(clamp);
+	}
+
+	CVarWrapper colorBoxCvar = cvarManager->getCvar("joystick_viz_clone_color_box");
+	if (!colorBoxCvar) { return; }
+	LinearColor colorBox = colorBoxCvar.getColorValue() / 255;
+	if (ImGui::ColorEdit4("Box Color", &colorBox.R, ImGuiColorEditFlags_AlphaBar)) {
+		colorBoxCvar.setValue(colorBox * 255);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Reset##BoxColor")) {
+		colorBoxCvar.setValue(LinearColor(255,255,255,100));
+	}
+
+	CVarWrapper colorPointCvar = cvarManager->getCvar("joystick_viz_clone_color_point");
+	if (!colorPointCvar) { return; }
+	LinearColor colorPoint = colorPointCvar.getColorValue() / 255;
+	if (ImGui::ColorEdit4("Point Color", &colorPoint.R, ImGuiColorEditFlags_AlphaBar)) {
+		colorPointCvar.setValue(colorPoint * 255);
+	}	
+	ImGui::SameLine();
+	if (ImGui::Button("Reset##PointColor")) {
+		colorPointCvar.setValue(LinearColor(255, 255, 255, 255));
+	}
+	
+	CVarWrapper colorDeadzoneCvar = cvarManager->getCvar("joystick_viz_clone_color_deadzone");
+	if (!colorDeadzoneCvar) { return; }
+	LinearColor colorDeadzone = colorDeadzoneCvar.getColorValue() / 255;
+	if (ImGui::ColorEdit4("Point Color in Deadzone", &colorDeadzone.R, ImGuiColorEditFlags_AlphaBar)) {
+		colorDeadzoneCvar.setValue(colorDeadzone * 255);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Reset##DeadzoneColor")) {
+		colorDeadzoneCvar.setValue(colorPointCvar.getColorValue());
 	}
 
 	Separator();
