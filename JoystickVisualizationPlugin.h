@@ -13,8 +13,9 @@ class JoystickVisualizationPlugin : public BakkesMod::Plugin::BakkesModPlugin,
 	public SettingsWindowBase
 {
 	std::vector<ControllerInput> inputHistory;
-	std::shared_ptr<int> boxSize;
 	std::shared_ptr<bool> enabled;
+	std::shared_ptr<int> numberOfPoints;
+	std::shared_ptr<int> boxSize;
 	std::shared_ptr<bool> useSensitivity;
 	std::shared_ptr<bool> clampInput;
 	std::shared_ptr<float> pointPercentage;

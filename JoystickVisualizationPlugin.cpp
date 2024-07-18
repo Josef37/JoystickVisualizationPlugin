@@ -5,11 +5,7 @@ BAKKESMOD_PLUGIN(JoystickVisualizationPlugin, "Joystick Visualization", plugin_v
 
 std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
 
-int input_history_length = 120;
-
 void JoystickVisualizationPlugin::onLoad() {
-	inputHistory.reserve(input_history_length);
-
 	gameWrapper->HookEventWithCaller<CarWrapper>(
 		"Function TAGame.Car_TA.SetVehicleInput",
 		[this](CarWrapper cw, void* params, std::string eventname) {
@@ -20,6 +16,7 @@ void JoystickVisualizationPlugin::onLoad() {
 	gameWrapper->RegisterDrawable([this](CanvasWrapper canvas) { Render(canvas); });
 
 	enabled = std::make_shared<bool>(true);
+	numberOfPoints = std::make_shared<int>(120);
 	boxSize = std::make_shared<int>(400);
 	useSensitivity = std::make_shared<bool>(true);
 	clampInput = std::make_shared<bool>(true);
@@ -30,8 +27,18 @@ void JoystickVisualizationPlugin::onLoad() {
 	pointColor = std::make_shared<LinearColor>();
 	pointColorDeadzone = std::make_shared<LinearColor>();
 
+	inputHistory.reserve(*numberOfPoints);
+
 	cvarManager->registerCvar("joystick_viz_clone_enabled", "1", "Show Joystick Visualization", true, true, 0, true, 1)
 		.bindTo(enabled);
+	cvarManager->registerCvar("joystick_viz_clone_point_count", "120", "Number of Inputs to Visualize", true, true, 1)
+		.addOnValueChanged(
+			[this](std::string oldValue, CVarWrapper cvar) {
+				int newNumberOfPoints = cvar.getIntValue();
+				*numberOfPoints = newNumberOfPoints;
+				inputHistory.reserve(newNumberOfPoints);
+			}
+		);
 	cvarManager->registerCvar("joystick_viz_clone_size", "400", "Joystick Visualization Size", true, true, 100, true, 1000)
 		.bindTo(boxSize);
 	cvarManager->registerCvar("joystick_viz_clone_sensitivity", "1", "Scale Input with Aerial Sensitivity", true, true, 0, true, 1)
@@ -45,7 +52,7 @@ void JoystickVisualizationPlugin::onLoad() {
 	cvarManager->registerCvar("joystick_viz_clone_center_y", "0.5", "Center of the Visualization - Y", true, true, 0.0f, true, 1.0f)
 		.bindTo(centerY);
 	cvarManager->registerCvar("joystick_viz_clone_color_box", "#FFFFFF64", "Box Color")
-		.bindTo(boxColor);	
+		.bindTo(boxColor);
 	cvarManager->registerCvar("joystick_viz_clone_color_point", "#FFFFFF", "Point Color")
 		.bindTo(pointColor);
 	cvarManager->registerCvar("joystick_viz_clone_color_deadzone", "#FFFFFF", "Point Color in Deadzone")
@@ -67,8 +74,8 @@ void JoystickVisualizationPlugin::OnSetInput(ControllerInput* ci) {
 		return;
 	}
 
-	if (inputHistory.size() >= input_history_length) {
-		int numToRemove = 1 + inputHistory.size() - input_history_length;
+	if (inputHistory.size() >= *numberOfPoints) {
+		int numToRemove = 1 + inputHistory.size() - *numberOfPoints;
 		inputHistory.erase(inputHistory.begin(), inputHistory.begin() + numToRemove);
 	}
 
@@ -109,7 +116,7 @@ void JoystickVisualizationPlugin::Render(CanvasWrapper canvas) {
 		Vector2F input = *clampInput ? clampedInput : rawInput;
 		Vector2F currentPos = canvasCenter + input * (*boxSize) / 2.0f;
 
-		float opacity = 1 - i / (float)input_history_length;
+		float opacity = 1 - i / (float)(*numberOfPoints);
 		bool isInDeadzone = input.X == 0.0f || input.Y == 0.0f;
 		LinearColor color = isInDeadzone ? *pointColorDeadzone : *pointColor;
 		color.A *= opacity;
@@ -137,8 +144,15 @@ void JoystickVisualizationPlugin::RenderSettings() {
 	CVarWrapper enableCvar = cvarManager->getCvar("joystick_viz_clone_enabled");
 	if (!enableCvar) { return; }
 	bool enabled = enableCvar.getBoolValue();
-	if (ImGui::Checkbox("Show Joystick Visualization", &enabled)) {
+	if (ImGui::Checkbox("Show Visualization", &enabled)) {
 		enableCvar.setValue(enabled);
+	}
+
+	CVarWrapper pointCountCVar = cvarManager->getCvar("joystick_viz_clone_point_count");
+	if (!pointCountCVar) { return; }
+	int pointCount = pointCountCVar.getIntValue();
+	if (ImGui::SliderInt("Number of Inputs to Visualize", &pointCount, 1, 600)) {
+		pointCountCVar.setValue(pointCount);
 	}
 
 	CVarWrapper sensitivityCvar = cvarManager->getCvar("joystick_viz_clone_sensitivity");
@@ -163,7 +177,7 @@ void JoystickVisualizationPlugin::RenderSettings() {
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("Reset##BoxColor")) {
-		colorBoxCvar.setValue(LinearColor(255,255,255,100));
+		colorBoxCvar.setValue(LinearColor(255, 255, 255, 100));
 	}
 
 	CVarWrapper colorPointCvar = cvarManager->getCvar("joystick_viz_clone_color_point");
@@ -171,12 +185,12 @@ void JoystickVisualizationPlugin::RenderSettings() {
 	LinearColor colorPoint = colorPointCvar.getColorValue() / 255;
 	if (ImGui::ColorEdit4("Point Color", &colorPoint.R, ImGuiColorEditFlags_AlphaBar)) {
 		colorPointCvar.setValue(colorPoint * 255);
-	}	
+	}
 	ImGui::SameLine();
 	if (ImGui::Button("Reset##PointColor")) {
 		colorPointCvar.setValue(LinearColor(255, 255, 255, 255));
 	}
-	
+
 	CVarWrapper colorDeadzoneCvar = cvarManager->getCvar("joystick_viz_clone_color_deadzone");
 	if (!colorDeadzoneCvar) { return; }
 	LinearColor colorDeadzone = colorDeadzoneCvar.getColorValue() / 255;
