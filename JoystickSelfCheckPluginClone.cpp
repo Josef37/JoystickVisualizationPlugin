@@ -24,7 +24,7 @@ void JoystickSelfCheckPluginClone::onLoad()
 
 	gameWrapper->RegisterDrawable(std::bind(&JoystickSelfCheckPluginClone::Render, this, std::placeholders::_1));
 
-	cvarManager->registerCvar("joystick_viz_clone_enabled", "1", "Show Joystick Self-Check Visualization", true, true, 0, true, 1)
+	cvarManager->registerCvar("joystick_viz_clone_enabled", "1", "Show Joystick Visualization", true, true, 0, true, 1)
 		.bindTo(enabled);
 	cvarManager->registerCvar("joystick_viz_clone_size", "400", "Joystick Visualization Size", true, true, 100, true, 1000)
 		.bindTo(boxSize);
@@ -71,8 +71,8 @@ void JoystickSelfCheckPluginClone::Render(CanvasWrapper canvas)
 		return;
 	}
 
-	int pointSize = (*boxSize) * (*pointPercentage);
-	int boxSizeWithPadding = (*boxSize) + pointSize;
+	float pointSize = (*boxSize) * (*pointPercentage);
+	float boxSizeWithPadding = (*boxSize) + pointSize;
 
 	Vector2 canvasSize = canvas.GetSize();
 	Vector2F canvasCenter = Vector2F(canvasSize.X / 2.0f, canvasSize.Y / 2.0f);
@@ -81,7 +81,9 @@ void JoystickSelfCheckPluginClone::Render(CanvasWrapper canvas)
 	canvas.SetPosition(Vector2F(canvasCenter.X - boxSizeWithPadding / 2.0f, canvasCenter.Y - boxSizeWithPadding / 2.0f));
 	canvas.DrawBox(Vector2F(boxSizeWithPadding, boxSizeWithPadding));
 
-	float scale = *useSensitivity ? gameWrapper->GetSettings().GetGamepadSettings().AirControlSensitivity : 1;
+	float scale = *useSensitivity
+		? gameWrapper->GetSettings().GetGamepadSettings().AirControlSensitivity
+		: 1;
 
 	int i = 0;
 	Vector2F prevPos;
@@ -92,16 +94,16 @@ void JoystickSelfCheckPluginClone::Render(CanvasWrapper canvas)
 
 		Vector2F rawInput = Vector2F(controllerInput.Steer, controllerInput.Pitch) * scale;
 		Vector2F clampedInput = Vector2F(std::clamp(rawInput.X, -1.0f, 1.0f), std::clamp(rawInput.Y, -1.0f, 1.0f));
-		Vector2F input = clampInput ? clampedInput : rawInput;
+		Vector2F input = *clampInput ? clampedInput : rawInput;
 		Vector2F currentPos = canvasCenter + input * (*boxSize) / 2.0f;
 
 		float alpha = 255 * (1 - i / (float)input_history_length);
 		bool isInDeadzone = input.X == 0.0f || input.Y == 0.0f;
-		int blue = isInDeadzone && highlightDeadzone ? 0 : 255;
+		int blue = isInDeadzone && *highlightDeadzone ? 0 : 255;
 		canvas.SetColor(255, 255, blue, alpha);
 		Vector2F offset = Vector2F(pointSize / 2.0, pointSize / 2.0);
 		canvas.SetPosition(currentPos - offset);
-		canvas.FillBox(Vector2({ pointSize, pointSize }));
+		canvas.FillBox(Vector2F(pointSize, pointSize));
 
 		if (i > 0) {
 			canvas.DrawLine(currentPos, prevPos);
@@ -118,7 +120,7 @@ void JoystickSelfCheckPluginClone::RenderSettings() {
 	CVarWrapper enableCvar = cvarManager->getCvar("joystick_viz_clone_enabled");
 	if (!enableCvar) { return; }
 	bool enabled = enableCvar.getBoolValue();
-	if (ImGui::Checkbox("Enable plugin", &enabled)) {
+	if (ImGui::Checkbox("Show Joystick Visualization", &enabled)) {
 		enableCvar.setValue(enabled);
 	}
 
@@ -152,9 +154,9 @@ void JoystickSelfCheckPluginClone::RenderSettings() {
 
 	CVarWrapper pointSizeCvar = cvarManager->getCvar("joystick_viz_clone_point_size");
 	if (!pointSizeCvar) { return; }
-	float pointSize = pointSizeCvar.getFloatValue();
-	if (ImGui::SliderFloat("Size of Points Relative to Box", &pointSize, 0.0f, 0.1f)) {
-		pointSizeCvar.setValue(pointSize);
+	float pointSize = pointSizeCvar.getFloatValue() * 100;
+	if (ImGui::SliderFloat("Size of Points Relative to Box", &pointSize, 0.0f, 10.0f, "%.1f %%")) {
+		pointSizeCvar.setValue(pointSize / 100.0f);
 	}
 
 	ImGui::Text(
