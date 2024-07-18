@@ -9,10 +9,10 @@
 constexpr auto plugin_version = stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR) "." stringify(VERSION_PATCH) "." stringify(VERSION_BUILD);
 
 
-class JoystickVisualizationPlugin : public BakkesMod::Plugin::BakkesModPlugin,
-	public SettingsWindowBase
+class JoystickVisualizationPlugin : public BakkesMod::Plugin::BakkesModPlugin, public SettingsWindowBase
 {
 	std::vector<ControllerInput> inputHistory;
+
 	std::shared_ptr<bool> enabled;
 	std::shared_ptr<int> numberOfPoints;
 	std::shared_ptr<int> boxSize;
