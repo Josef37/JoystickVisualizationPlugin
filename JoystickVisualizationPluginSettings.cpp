@@ -53,11 +53,14 @@ void JoystickVisualizationPlugin::RenderSettings() {
 	RenderCheckbox(clampCvar, "Clamp Values to Max Input");
 
 	RenderSeparator();
-	ImGui::Text("Colors");
+	ImGui::Text("Styling");
 
 	CVarWrapper colorBoxCvar = cvarManager->getCvar(JOYSTICK_VIS_COLOR_BOX);
 	RenderColorEdit(colorBoxCvar, "Box Color"); ImGui::SameLine();
 	if (ImGui::Button("Reset##BoxColor")) { colorBoxCvar.ResetToDefault(); }
+
+	CVarWrapper fillBoxCvar = cvarManager->getCvar(JOYSTICK_VIS_FILL_BOX); ImGui::SameLine();
+	RenderCheckbox(fillBoxCvar, "Fill Box");
 
 	CVarWrapper colorPointCvar = cvarManager->getCvar(JOYSTICK_VIS_COLOR_POINT);
 	RenderColorEdit(colorPointCvar, "Point Color"); ImGui::SameLine();

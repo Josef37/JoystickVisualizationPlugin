@@ -23,6 +23,7 @@ void JoystickVisualizationPlugin::onLoad() {
 	pointPercentage = std::make_shared<float>(0.02);
 	centerX = std::make_shared<float>(0.5f);
 	centerY = std::make_shared<float>(0.5f);
+	fillBox = std::make_shared<bool>(false);
 	boxColor = std::make_shared<LinearColor>();
 	pointColor = std::make_shared<LinearColor>();
 	pointColorDeadzone = std::make_shared<LinearColor>();
@@ -49,6 +50,8 @@ void JoystickVisualizationPlugin::onLoad() {
 		.bindTo(centerX);
 	cvarManager->registerCvar(JOYSTICK_VIS_CENTER_Y, "0.5", "Center of the Visualization - Y", true, true, 0, true, 1)
 		.bindTo(centerY);
+	cvarManager->registerCvar(JOYSTICK_VIS_FILL_BOX, "0", "Fill Box", true, true, 0, true, 1)
+		.bindTo(fillBox);
 	cvarManager->registerCvar(JOYSTICK_VIS_COLOR_BOX, "#FFFFFF64", "Box Color")
 		.bindTo(boxColor);
 	cvarManager->registerCvar(JOYSTICK_VIS_COLOR_POINT, "#FFFFFF", "Point Color")
@@ -98,7 +101,9 @@ void JoystickVisualizationPlugin::Render(CanvasWrapper canvas) {
 
 	canvas.SetColor(*boxColor);
 	canvas.SetPosition(Vector2F(canvasCenter.X - boxSizeWithPadding / 2.0f, canvasCenter.Y - boxSizeWithPadding / 2.0f));
-	canvas.DrawBox(Vector2F(boxSizeWithPadding, boxSizeWithPadding));
+	Vector2F boxDimensions = Vector2F(boxSizeWithPadding, boxSizeWithPadding);
+	if (*fillBox) { canvas.FillBox(boxDimensions); }
+	else { canvas.DrawBox(boxDimensions); }
 
 	float scale = *useSensitivity
 		? gameWrapper->GetSettings().GetGamepadSettings().AirControlSensitivity

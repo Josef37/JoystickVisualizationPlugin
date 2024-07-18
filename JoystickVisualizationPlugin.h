@@ -16,6 +16,7 @@ constexpr auto JOYSTICK_VIS_CLAMP = "joystick_vis_clamp";
 constexpr auto JOYSTICK_VIS_POINT_SIZE = "joystick_vis_point_size";
 constexpr auto JOYSTICK_VIS_CENTER_X = "joystick_vis_center_x";
 constexpr auto JOYSTICK_VIS_CENTER_Y = "joystick_vis_center_y";
+constexpr auto JOYSTICK_VIS_FILL_BOX = "joystick_vis_fill_box";
 constexpr auto JOYSTICK_VIS_COLOR_BOX = "joystick_vis_color_box";
 constexpr auto JOYSTICK_VIS_COLOR_POINT = "joystick_vis_color_point";
 constexpr auto JOYSTICK_VIS_COLOR_DEADZONE = "joystick_vis_color_deadzone";
@@ -32,6 +33,7 @@ class JoystickVisualizationPlugin : public BakkesMod::Plugin::BakkesModPlugin, p
 	std::shared_ptr<float> pointPercentage;
 	std::shared_ptr<float> centerX;
 	std::shared_ptr<float> centerY;
+	std::shared_ptr<bool> fillBox;
 	std::shared_ptr<LinearColor> boxColor;
 	std::shared_ptr<LinearColor> pointColor;
 	std::shared_ptr<LinearColor> pointColorDeadzone;
