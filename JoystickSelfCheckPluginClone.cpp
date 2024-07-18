@@ -9,7 +9,7 @@ int input_history_length = 120;
 
 void JoystickSelfCheckPluginClone::onLoad()
 {
-	enabled = std::make_shared<bool>(false);
+	enabled = std::make_shared<bool>(true);
 	joystickVizSize = std::make_shared<int>(400);
 
 	inputHistory.reserve(input_history_length);
@@ -20,7 +20,7 @@ void JoystickSelfCheckPluginClone::onLoad()
 
 	gameWrapper->RegisterDrawable(std::bind(&JoystickSelfCheckPluginClone::Render, this, std::placeholders::_1));
 
-	cvarManager->registerCvar("joystick_viz_clone_enabled", "0", "Show Joystick Self-Check Visualization", true, true, 0.f, true, 1.f)
+	cvarManager->registerCvar("joystick_viz_clone_enabled", "1", "Show Joystick Self-Check Visualization", true, true, 0, true, 1)
 		.bindTo(enabled);
 	cvarManager->registerCvar("joystick_viz_clone_size", "400", "Joystick Visualization Size", true, true, 100, true, 1000)
 		.bindTo(joystickVizSize);
@@ -34,7 +34,7 @@ void JoystickSelfCheckPluginClone::onUnload() {
 bool JoystickSelfCheckPluginClone::isActive() {
 	return (gameWrapper->IsInFreeplay() || gameWrapper->IsInCustomTraining()) 
 		&& !gameWrapper->IsPaused() 
-		&& cvarManager->getCvar("joystick_viz_clone_enabled").getBoolValue();
+		&& *enabled;
 }
 
 void JoystickSelfCheckPluginClone::OnSetInput(CarWrapper cw, void* params)
@@ -45,7 +45,6 @@ void JoystickSelfCheckPluginClone::OnSetInput(CarWrapper cw, void* params)
 
 	ControllerInput* ci = (ControllerInput*)params;
 
-	if (cvarManager->getCvar("joystick_viz_clone_enabled").getBoolValue()) {
 		if (inputHistory.size() >= input_history_length) {
 			int numToRemove = 1 + inputHistory.size() - input_history_length;
 			inputHistory.erase(inputHistory.begin(), inputHistory.begin() + numToRemove);
@@ -53,7 +52,6 @@ void JoystickSelfCheckPluginClone::OnSetInput(CarWrapper cw, void* params)
 
 		inputHistory.push_back(*ci);
 	}
-}
 
 void JoystickSelfCheckPluginClone::Render(CanvasWrapper canvas)
 {
@@ -61,31 +59,36 @@ void JoystickSelfCheckPluginClone::Render(CanvasWrapper canvas)
 		return;
 	}
 
+	int pointSize = 5;
+	int boxSize = *joystickVizSize + pointSize;
+
 	Vector2 canvasSize = canvas.GetSize();
-	Vector2 canvasCenter = { canvasSize.X / 2, canvasSize.Y / 2 };
+	Vector2F canvasCenter = Vector2F(canvasSize.X / 2.0f, canvasSize.Y / 2.0f);
 
 	canvas.SetColor(255, 255, 255, 100);
-	canvas.SetPosition(Vector2({ canvasCenter.X - *joystickVizSize / 2, canvasCenter.Y - *joystickVizSize / 2 }));
-	canvas.DrawBox(Vector2({ *joystickVizSize, *joystickVizSize }));
+	canvas.SetPosition(Vector2F(canvasCenter.X - boxSize / 2.0f, canvasCenter.Y - boxSize / 2.0f));
+	canvas.DrawBox(Vector2F(boxSize, boxSize));
 
 	int i = 0;
-	Vector2 prevPos;
+	Vector2F prevPos;
 
-	for (auto it = inputHistory.end(); it != inputHistory.begin(); --it)
+	for (auto it = inputHistory.rbegin(); it != inputHistory.rend(); ++it)
 	{
 		ControllerInput input = *it;
 
-		Vector2 currentPos = { canvasCenter.X + (int)(*joystickVizSize / 2 * input.Steer) - 3, canvasCenter.Y + (int)(*joystickVizSize / 2 * input.Pitch) - 3 };
+		Vector2F currentPos = Vector2F(
+			canvasCenter.X + input.Steer * (*joystickVizSize / 2.0f),
+			canvasCenter.Y + input.Pitch * (*joystickVizSize / 2.0f)
+		);
 
-		canvas.SetColor(255, 255, 255, 255 - i * 2);
-		canvas.SetPosition(currentPos);
-		canvas.FillBox(Vector2({ 5, 5 }));
+		float alpha = 255 * (1 - i / (float)input_history_length);
+		canvas.SetColor(255, 255, 255, alpha);
+		Vector2F offset = Vector2F(pointSize / 2.0, pointSize / 2.0);
+		canvas.SetPosition(currentPos - offset);
+		canvas.FillBox(Vector2({ pointSize, pointSize }));
 
 		if (i > 0) {
-			ControllerInput prevInput = inputHistory[inputHistory.size() - i - 1];
-			Vector2 prevPos = { canvasCenter.X + (int)(*joystickVizSize / 2 * prevInput.Steer), canvasCenter.Y + (int)(*joystickVizSize / 2 * prevInput.Pitch) };
-
-			canvas.DrawLine({ canvasCenter.X + (int)(*joystickVizSize / 2 * input.Steer), canvasCenter.Y + (int)(*joystickVizSize / 2 * input.Pitch) }, prevPos);
+			canvas.DrawLine(currentPos, prevPos);
 		}
 
 		prevPos = currentPos;
