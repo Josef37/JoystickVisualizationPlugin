@@ -15,6 +15,7 @@ class JoystickSelfCheckPluginClone : public BakkesMod::Plugin::BakkesModPlugin,
 	std::vector<ControllerInput> inputHistory;
 	std::shared_ptr<int> joystickVizSize;
 	std::shared_ptr<bool> enabled;
+	std::shared_ptr<bool> highlightDeadzone;
 
 	void onLoad() override;
 	void onUnload() override;

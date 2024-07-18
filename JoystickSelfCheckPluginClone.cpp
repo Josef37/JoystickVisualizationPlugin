@@ -11,6 +11,7 @@ void JoystickSelfCheckPluginClone::onLoad()
 {
 	enabled = std::make_shared<bool>(true);
 	joystickVizSize = std::make_shared<int>(400);
+	highlightDeadzone = std::make_shared<bool>(true);
 
 	inputHistory.reserve(input_history_length);
 
@@ -24,6 +25,8 @@ void JoystickSelfCheckPluginClone::onLoad()
 		.bindTo(enabled);
 	cvarManager->registerCvar("joystick_viz_clone_size", "400", "Joystick Visualization Size", true, true, 100, true, 1000)
 		.bindTo(joystickVizSize);
+	cvarManager->registerCvar("joystick_viz_clone_deadzone", "1", "Highlight Points in Deadzone", true, true, 0, true, 1)
+		.bindTo(highlightDeadzone);
 }
 
 void JoystickSelfCheckPluginClone::onUnload() {
@@ -32,8 +35,8 @@ void JoystickSelfCheckPluginClone::onUnload() {
 }
 
 bool JoystickSelfCheckPluginClone::isActive() {
-	return (gameWrapper->IsInFreeplay() || gameWrapper->IsInCustomTraining()) 
-		&& !gameWrapper->IsPaused() 
+	return (gameWrapper->IsInFreeplay() || gameWrapper->IsInCustomTraining())
+		&& !gameWrapper->IsPaused()
 		&& *enabled;
 }
 
@@ -45,13 +48,13 @@ void JoystickSelfCheckPluginClone::OnSetInput(CarWrapper cw, void* params)
 
 	ControllerInput* ci = (ControllerInput*)params;
 
-		if (inputHistory.size() >= input_history_length) {
-			int numToRemove = 1 + inputHistory.size() - input_history_length;
-			inputHistory.erase(inputHistory.begin(), inputHistory.begin() + numToRemove);
-		}
-
-		inputHistory.push_back(*ci);
+	if (inputHistory.size() >= input_history_length) {
+		int numToRemove = 1 + inputHistory.size() - input_history_length;
+		inputHistory.erase(inputHistory.begin(), inputHistory.begin() + numToRemove);
 	}
+
+	inputHistory.push_back(*ci);
+}
 
 void JoystickSelfCheckPluginClone::Render(CanvasWrapper canvas)
 {
@@ -82,7 +85,9 @@ void JoystickSelfCheckPluginClone::Render(CanvasWrapper canvas)
 		);
 
 		float alpha = 255 * (1 - i / (float)input_history_length);
-		canvas.SetColor(255, 255, 255, alpha);
+		bool isInDeadzone = input.Steer == 0.0f || input.Pitch == 0.0f;
+		int blue = isInDeadzone && highlightDeadzone ? 0 : 255;
+		canvas.SetColor(255, 255, blue, alpha);
 		Vector2F offset = Vector2F(pointSize / 2.0, pointSize / 2.0);
 		canvas.SetPosition(currentPos - offset);
 		canvas.FillBox(Vector2({ pointSize, pointSize }));
@@ -105,8 +110,12 @@ void JoystickSelfCheckPluginClone::RenderSettings() {
 	if (ImGui::Checkbox("Enable plugin", &enabled)) {
 		enableCvar.setValue(enabled);
 	}
-	if (ImGui::IsItemHovered()) {
-		ImGui::SetTooltip("Show Joystick Self - Check Visualization");
+
+	CVarWrapper deadzoneCvar = cvarManager->getCvar("joystick_viz_clone_deadzone");
+	if (!deadzoneCvar) { return; }
+	bool deadzone = deadzoneCvar.getBoolValue();
+	if (ImGui::Checkbox("Highlight Points in Deadzone", &deadzone)) {
+		deadzoneCvar.setValue(deadzone);
 	}
 
 	CVarWrapper sizeCvar = cvarManager->getCvar("joystick_viz_clone_size");
@@ -115,21 +124,17 @@ void JoystickSelfCheckPluginClone::RenderSettings() {
 	if (ImGui::SliderInt("Visualization Size", &size, 100, 1000)) {
 		sizeCvar.setValue(size);
 	}
-	if (ImGui::IsItemHovered()) {
-		std::string hoverText = "size is " + std::to_string(size);
-		ImGui::SetTooltip(hoverText.c_str());
-	}
 
 	ImGui::Text(
-		"Self - Check Protips :"
-		"-Joystick should trace smooth and consistent lines"
-		"-Jagged / inconsistent traces may indicate controller needs to be repaired / replaced.Try using compressed air to clean out sensor."
-		"-Try rotating joystick all the way around edge in a circle"
-		"-Default deadzone shape and sensitivity should trace a circle"
-		"-Setting a higher sensitivity with an external tool(such as DS4Win or Steam controller config) will increase size of circle and cut off edges"
-		"-A squared deadzone(changed in Steam controller config) should instead trace a square"
-		"-NOTE: In - game sensitivity is NOT reflected in visualization"
-		"-See plugin homepage for examples and more information"
-		"Created by AlpacaFlightSim#0001 / @AlpacaFlightSim"
+		"Self - Check Protips :\n"
+		"-Joystick should trace smooth and consistent lines\n"
+		"-Jagged / inconsistent traces may indicate controller needs to be repaired / replaced.Try using compressed air to clean out sensor.\n"
+		"-Try rotating joystick all the way around edge in a circle\n"
+		"-Default deadzone shape and sensitivity should trace a circle\n"
+		"-Setting a higher sensitivity with an external tool(such as DS4Win or Steam controller config) will increase size of circle and cut off edges\n"
+		"-A squared deadzone(changed in Steam controller config) should instead trace a square\n"
+		"-NOTE: In - game sensitivity is NOT reflected in visualization\n"
+		"-See plugin homepage for examples and more information\n"
+		"Created by AlpacaFlightSim#0001 / @AlpacaFlightSim\n"
 	);
 }
