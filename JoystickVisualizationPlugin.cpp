@@ -37,17 +37,17 @@ void JoystickVisualizationPlugin::onLoad() {
 				inputHistory.reserve(newNumberOfPoints);
 			}
 		);
-	cvarManager->registerCvar(JOYSTICK_VIS_SIZE, "400", "Joystick Visualization Size", true, true, 100, true, 1000)
+	cvarManager->registerCvar(JOYSTICK_VIS_SIZE, "400", "Joystick Visualization Size", true, true, 10)
 		.bindTo(boxSize);
-	cvarManager->registerCvar(JOYSTICK_VIS_SENSITIVITY, "1", "Scale Input with Aerial Sensitivity", true, true, 0, true, 1)
+	cvarManager->registerCvar(JOYSTICK_VIS_SENSITIVITY, "0", "Scale Input with Aerial Sensitivity", true, true, 0, true, 1)
 		.bindTo(useSensitivity);
 	cvarManager->registerCvar(JOYSTICK_VIS_CLAMP, "1", "Clamp Values to Max Input", true, true, 0, true, 1)
 		.bindTo(clampInput);
-	cvarManager->registerCvar(JOYSTICK_VIS_POINT_SIZE, "0.015", "Size of Points Relative to Box", true, true, 0.0f, true, 0.1f)
+	cvarManager->registerCvar(JOYSTICK_VIS_POINT_SIZE, "0.015", "Size of Points Relative to Box", true, true, 0, true, 1)
 		.bindTo(pointPercentage);
-	cvarManager->registerCvar(JOYSTICK_VIS_CENTER_X, "0.5", "Center of the Visualization - X", true, true, 0.0f, true, 1.0f)
+	cvarManager->registerCvar(JOYSTICK_VIS_CENTER_X, "0.5", "Center of the Visualization - X", true, true, 0, true, 1)
 		.bindTo(centerX);
-	cvarManager->registerCvar(JOYSTICK_VIS_CENTER_Y, "0.5", "Center of the Visualization - Y", true, true, 0.0f, true, 1.0f)
+	cvarManager->registerCvar(JOYSTICK_VIS_CENTER_Y, "0.5", "Center of the Visualization - Y", true, true, 0, true, 1)
 		.bindTo(centerY);
 	cvarManager->registerCvar(JOYSTICK_VIS_COLOR_BOX, "#FFFFFF64", "Box Color")
 		.bindTo(boxColor);

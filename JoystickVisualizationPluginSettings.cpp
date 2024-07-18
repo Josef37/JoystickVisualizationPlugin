@@ -1,115 +1,90 @@
 ﻿#include "pch.h"
 #include "JoystickVisualizationPlugin.h"
 
-static void Separator() {
+static void RenderSeparator() {
 	ImGui::Spacing();
 	ImGui::Separator();
 	ImGui::Spacing();
 }
 
+static void RenderCheckbox(CVarWrapper cw, const char* label) {
+	if (!cw) { return; }
+	bool value = cw.getBoolValue();
+	if (ImGui::Checkbox(label, &value)) {
+		cw.setValue(value);
+	}
+}
+
+static void RenderSliderInt(CVarWrapper cw, const char* label, int min, int max) {
+	if (!cw) { return; }
+	int value = cw.getIntValue();
+	if (ImGui::SliderInt(label, &value, min, max)) {
+		cw.setValue(value);
+	}
+}
+
+static void RenderSliderPercentage(CVarWrapper cw, const char* label, float min, float max) {
+	if (!cw) { return; }
+	float value = cw.getFloatValue() * 100;
+	if (ImGui::SliderFloat(label, &value, min, max, "%.1f %%")) {
+		cw.setValue(value / 100);
+	}
+}
+
+static void RenderColorEdit(CVarWrapper cw, const char* label) {
+	if (!cw) { return; }
+	LinearColor color = cw.getColorValue() / 255;
+	if (ImGui::ColorEdit4(label, &color.R, ImGuiColorEditFlags_AlphaBar)) {
+		cw.setValue(color * 255);
+	}
+}
+
 void JoystickVisualizationPlugin::RenderSettings() {
 	CVarWrapper enableCvar = cvarManager->getCvar(JOYSTICK_VIS_ENABLED);
-	if (!enableCvar) { return; }
-	bool enabled = enableCvar.getBoolValue();
-	if (ImGui::Checkbox("Show Visualization", &enabled)) {
-		enableCvar.setValue(enabled);
-	}
+	RenderCheckbox(enableCvar, "Show Visualization");
 
 	CVarWrapper pointCountCVar = cvarManager->getCvar(JOYSTICK_VIS_POINT_COUNT);
-	if (!pointCountCVar) { return; }
-	int pointCount = pointCountCVar.getIntValue();
-	if (ImGui::SliderInt("Number of Inputs to Visualize", &pointCount, 1, 600)) {
-		pointCountCVar.setValue(pointCount);
-	}
+	RenderSliderInt(pointCountCVar, "Number of Inputs to Visualize", 1, 600);
 
 	CVarWrapper sensitivityCvar = cvarManager->getCvar(JOYSTICK_VIS_SENSITIVITY);
-	if (!sensitivityCvar) { return; }
-	bool sensitivity = sensitivityCvar.getBoolValue();
-	if (ImGui::Checkbox("Scale Input with Aerial Sensitivity", &sensitivity)) {
-		sensitivityCvar.setValue(sensitivity);
-	}
+	RenderCheckbox(sensitivityCvar, "Scale Input with Aerial Sensitivity");
 
 	CVarWrapper clampCvar = cvarManager->getCvar(JOYSTICK_VIS_CLAMP);
-	if (!clampCvar) { return; }
-	bool clamp = clampCvar.getBoolValue();
-	if (ImGui::Checkbox("Clamp Values to Max Input", &clamp)) {
-		clampCvar.setValue(clamp);
-	}
+	RenderCheckbox(clampCvar, "Clamp Values to Max Input");
+
+	RenderSeparator();
+	ImGui::Text("Colors");
 
 	CVarWrapper colorBoxCvar = cvarManager->getCvar(JOYSTICK_VIS_COLOR_BOX);
-	if (!colorBoxCvar) { return; }
-	LinearColor colorBox = colorBoxCvar.getColorValue() / 255;
-	if (ImGui::ColorEdit4("Box Color", &colorBox.R, ImGuiColorEditFlags_AlphaBar)) {
-		colorBoxCvar.setValue(colorBox * 255);
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Reset##BoxColor")) {
-		colorBoxCvar.setValue(LinearColor(255, 255, 255, 100));
-	}
+	RenderColorEdit(colorBoxCvar, "Box Color"); ImGui::SameLine();
+	if (ImGui::Button("Reset##BoxColor")) { colorBoxCvar.ResetToDefault(); }
 
 	CVarWrapper colorPointCvar = cvarManager->getCvar(JOYSTICK_VIS_COLOR_POINT);
-	if (!colorPointCvar) { return; }
-	LinearColor colorPoint = colorPointCvar.getColorValue() / 255;
-	if (ImGui::ColorEdit4("Point Color", &colorPoint.R, ImGuiColorEditFlags_AlphaBar)) {
-		colorPointCvar.setValue(colorPoint * 255);
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Reset##PointColor")) {
-		colorPointCvar.setValue(LinearColor(255, 255, 255, 255));
-	}
+	RenderColorEdit(colorPointCvar, "Point Color"); ImGui::SameLine();
+	if (ImGui::Button("Reset##PointColor")) { colorPointCvar.ResetToDefault(); }
 
 	CVarWrapper colorDeadzoneCvar = cvarManager->getCvar(JOYSTICK_VIS_COLOR_DEADZONE);
-	if (!colorDeadzoneCvar) { return; }
-	LinearColor colorDeadzone = colorDeadzoneCvar.getColorValue() / 255;
-	if (ImGui::ColorEdit4("Point Color in Deadzone", &colorDeadzone.R, ImGuiColorEditFlags_AlphaBar)) {
-		colorDeadzoneCvar.setValue(colorDeadzone * 255);
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Reset##DeadzoneColor")) {
-		colorDeadzoneCvar.setValue(colorPointCvar.getColorValue());
-	}
+	RenderColorEdit(colorDeadzoneCvar, "Point Color in Deadzone"); ImGui::SameLine();
+	if (ImGui::Button("Match Point Color")) { colorDeadzoneCvar.setValue(colorPointCvar.getColorValue()); }
 
-	Separator();
+	RenderSeparator();
 	ImGui::Text("Sizing");
 
 	CVarWrapper sizeCvar = cvarManager->getCvar(JOYSTICK_VIS_SIZE);
-	if (!sizeCvar) { return; }
-	int size = sizeCvar.getIntValue();
-	if (ImGui::SliderInt("Visualization Size", &size, 100, 1000)) {
-		sizeCvar.setValue(size);
-	}
+	RenderSliderInt(sizeCvar, "Visualization Size", 100, 1000);
 
 	CVarWrapper centerXCvar = cvarManager->getCvar(JOYSTICK_VIS_CENTER_X);
-	if (!centerXCvar) { return; }
-	float centerX = centerXCvar.getFloatValue() * 100;
-	if (ImGui::SliderFloat("Center X", &centerX, 0.0f, 100.0f, "%.1f %%")) {
-		centerXCvar.setValue(centerX / 100.0f);
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Center##X")) {
-		centerXCvar.setValue(0.5f);
-	}
+	RenderSliderPercentage(centerXCvar, "Center X", 0, 100); ImGui::SameLine();
+	if (ImGui::Button("Reset##X")) { centerXCvar.ResetToDefault(); }
 
 	CVarWrapper centerYCvar = cvarManager->getCvar(JOYSTICK_VIS_CENTER_Y);
-	if (!centerYCvar) { return; }
-	float centerY = centerYCvar.getFloatValue() * 100;
-	if (ImGui::SliderFloat("Center Y", &centerY, 0.0f, 100.0f, "%.1f %%")) {
-		centerYCvar.setValue(centerY / 100.0f);
-	}
-	ImGui::SameLine();
-	if (ImGui::Button("Center##Y")) {
-		centerYCvar.setValue(0.5f);
-	}
+	RenderSliderPercentage(centerYCvar, "Center Y", 0, 100); ImGui::SameLine();
+	if (ImGui::Button("Reset##Y")) { centerYCvar.ResetToDefault(); }
 
 	CVarWrapper pointSizeCvar = cvarManager->getCvar(JOYSTICK_VIS_POINT_SIZE);
-	if (!pointSizeCvar) { return; }
-	float pointSize = pointSizeCvar.getFloatValue() * 100;
-	if (ImGui::SliderFloat("Size of Points Relative to Box", &pointSize, 0.0f, 10.0f, "%.1f %%")) {
-		pointSizeCvar.setValue(pointSize / 100.0f);
-	}
+	RenderSliderPercentage(pointSizeCvar, "Size of Points Relative to Box", 0, 10);
 
-	Separator();
-
+	RenderSeparator();
 	ImGui::Text("Tips");
 	ImGui::Text(
 		"- Joystick should trace smooth and consistent lines.\n"
@@ -122,7 +97,6 @@ void JoystickVisualizationPlugin::RenderSettings() {
 		"- See plugin homepage for examples and more information�."
 	);
 
-	Separator();
-
-	ImGui::Text("Originally created by @AlpacaFlightSim, updated by @Brotzeitsepp.");
+	RenderSeparator();
+	ImGui::Text("Originally created by @AlpacaFlightSim, improved upon by @Brotzeitsepp.");
 }
