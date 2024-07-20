@@ -5,28 +5,45 @@ BAKKESMOD_PLUGIN(JoystickVisualizationPlugin, "Joystick Visualization", plugin_v
 
 std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
 
+bool DoubleJumped;
+bool IsDodging;
+
 void JoystickVisualizationPlugin::onLoad() {
+	// Record input and determine if it caused a dodge or double jump.
+	// That's why we also hook into the "Post" event.
 	gameWrapper->HookEventWithCaller<CarWrapper>(
 		"Function TAGame.Car_TA.SetVehicleInput",
 		[this](CarWrapper cw, void* params, std::string eventname) {
-			OnSetInput((ControllerInput*)params);
+			OnSetInput(&cw, (ControllerInput*)params);
+		}
+	);
+	gameWrapper->HookEventWithCallerPost<CarWrapper>(
+		"Function TAGame.Car_TA.SetVehicleInput",
+		[this](CarWrapper cw, void* params, std::string eventname) {
+			OnSetInputPost(&cw, (ControllerInput*)params);
 		}
 	);
 
-	gameWrapper->RegisterDrawable([this](CanvasWrapper canvas) { Render(canvas); });
+	gameWrapper->RegisterDrawable(
+		[this](CanvasWrapper canvas) {
+			Render(canvas);
+		}
+	);
 
 	enabled = std::make_shared<bool>(true);
 	numberOfPoints = std::make_shared<int>(120);
 	boxSize = std::make_shared<int>(400);
 	useSensitivity = std::make_shared<bool>(true);
 	clampInput = std::make_shared<bool>(true);
-	pointPercentage = std::make_shared<float>(0.02);
+	pointPercentage = std::make_shared<float>(0.015);
+	pointJumpPercentage = std::make_shared<float>(0.05);
 	centerX = std::make_shared<float>(0.5f);
 	centerY = std::make_shared<float>(0.5f);
 	fillBox = std::make_shared<bool>(false);
 	boxColor = std::make_shared<LinearColor>();
 	pointColor = std::make_shared<LinearColor>();
-	pointColorDeadzone = std::make_shared<LinearColor>();
+	pointDeadzoneColor = std::make_shared<LinearColor>();
+	pointJumpColor = std::make_shared<LinearColor>();
 
 	cvarManager->registerCvar(JOYSTICK_VIS_ENABLED, "1", "Show Joystick Visualization", true, true, 0, true, 1)
 		.bindTo(enabled);
@@ -46,6 +63,8 @@ void JoystickVisualizationPlugin::onLoad() {
 		.bindTo(clampInput);
 	cvarManager->registerCvar(JOYSTICK_VIS_POINT_SIZE, "0.015", "Size of Points Relative to Box", true, true, 0, true, 1)
 		.bindTo(pointPercentage);
+	cvarManager->registerCvar(JOYSTICK_VIS_JUMP_SIZE, "0.05", "Size of Points for Flips Relative to Box", true, true, 0, true, 1)
+		.bindTo(pointJumpPercentage);
 	cvarManager->registerCvar(JOYSTICK_VIS_CENTER_X, "0.5", "Center of the Visualization - X", true, true, 0, true, 1)
 		.bindTo(centerX);
 	cvarManager->registerCvar(JOYSTICK_VIS_CENTER_Y, "0.5", "Center of the Visualization - Y", true, true, 0, true, 1)
@@ -56,8 +75,10 @@ void JoystickVisualizationPlugin::onLoad() {
 		.bindTo(boxColor);
 	cvarManager->registerCvar(JOYSTICK_VIS_COLOR_POINT, "#FFFFFF", "Point Color")
 		.bindTo(pointColor);
-	cvarManager->registerCvar(JOYSTICK_VIS_COLOR_DEADZONE, "#FFFFFF", "Point Color in Deadzone")
-		.bindTo(pointColorDeadzone);
+	cvarManager->registerCvar(JOYSTICK_VIS_COLOR_DEADZONE, "#AAFFAA", "Point Color in Deadzone")
+		.bindTo(pointDeadzoneColor);
+	cvarManager->registerCvar(JOYSTICK_VIS_COLOR_JUMP, "#FF0000", "Point Color for Flips")
+		.bindTo(pointJumpColor);
 
 	inputHistory.reserve(*numberOfPoints);
 }
@@ -72,17 +93,38 @@ bool JoystickVisualizationPlugin::isActive() {
 		&& *enabled;
 }
 
-void JoystickVisualizationPlugin::OnSetInput(ControllerInput* ci) {
+void JoystickVisualizationPlugin::OnSetInput(CarWrapper* cw, ControllerInput* ci) {
 	if (!isActive()) {
 		return;
 	}
+
+	// `ControllerInput->Jumped` is only true when the jump button is initially pressed.
+	// We record the values for double jump and dodging before the processing takes places to compare them later.
+	if (ci->Jumped) {
+		DoubleJumped = cw->GetbDoubleJumped();
+		IsDodging = cw->IsDodging();
+	}
+}
+
+void JoystickVisualizationPlugin::OnSetInputPost(CarWrapper* cw, ControllerInput* ci) {
+	if (!isActive()) {
+		return;
+	}
+
+	// We compare the values for the same input event before and after processing.
+	// This way we can determine if the current jump input causes a double jump or dodge.
+	// `ControllerInput->Jumped` is only true when the jump button is initially pressed.
+	JumpType jumpType = !ci->Jumped ? JumpType::Other
+		: !IsDodging && cw->IsDodging() ? JumpType::Dodge
+		: !DoubleJumped && cw->GetbDoubleJumped() ? JumpType::Double
+		: JumpType::Other;
 
 	if (inputHistory.size() >= *numberOfPoints) {
 		int numToRemove = 1 + inputHistory.size() - *numberOfPoints;
 		inputHistory.erase(inputHistory.begin(), inputHistory.begin() + numToRemove);
 	}
 
-	inputHistory.push_back(*ci);
+	inputHistory.push_back({ jumpType, *ci });
 }
 
 void JoystickVisualizationPlugin::Render(CanvasWrapper canvas) {
@@ -90,8 +132,7 @@ void JoystickVisualizationPlugin::Render(CanvasWrapper canvas) {
 		return;
 	}
 
-	float pointSize = (*boxSize) * (*pointPercentage);
-	float boxSizeWithPadding = (*boxSize) + pointSize;
+	float boxSizeWithPadding = *boxSize * (1 + *pointPercentage);
 
 	Vector2 canvasSize = canvas.GetSize();
 	Vector2F canvasCenter = Vector2F(
@@ -114,19 +155,23 @@ void JoystickVisualizationPlugin::Render(CanvasWrapper canvas) {
 
 	for (auto iter = inputHistory.rbegin(); iter != inputHistory.rend(); ++iter)
 	{
-		ControllerInput controllerInput = *iter;
+		ControllerInput controllerInput = iter->controllerInput;
+		JumpType jumpType = iter->jumpType;
 
 		Vector2F rawInput = Vector2F(controllerInput.Steer, controllerInput.Pitch) * scale;
 		Vector2F clampedInput = Vector2F(std::clamp(rawInput.X, -1.0f, 1.0f), std::clamp(rawInput.Y, -1.0f, 1.0f));
 		Vector2F input = *clampInput ? clampedInput : rawInput;
+		bool jumped = jumpType == JumpType::Dodge || jumpType == JumpType::Double;
 		Vector2F currentPos = canvasCenter + input * (*boxSize) / 2.0f;
 
 		float opacity = 1 - i / (float)(*numberOfPoints);
 		bool isInDeadzone = input.X == 0.0f || input.Y == 0.0f;
-		LinearColor color = isInDeadzone ? *pointColorDeadzone : *pointColor;
+		LinearColor colorByPosition = isInDeadzone ? *pointDeadzoneColor : *pointColor;
+		LinearColor color = jumped ? *pointJumpColor : colorByPosition;
 		color.A *= opacity;
 		canvas.SetColor(color);
-		Vector2F offset = Vector2F(pointSize / 2.0, pointSize / 2.0);
+		float pointSize = *boxSize * (jumped ? *pointJumpPercentage : *pointPercentage);
+		Vector2F offset = Vector2F(pointSize / 2, pointSize / 2);
 		canvas.SetPosition(currentPos - offset);
 		canvas.FillBox(Vector2F(pointSize, pointSize));
 

@@ -68,7 +68,12 @@ void JoystickVisualizationPlugin::RenderSettings() {
 
 	CVarWrapper colorDeadzoneCvar = cvarManager->getCvar(JOYSTICK_VIS_COLOR_DEADZONE);
 	RenderColorEdit(colorDeadzoneCvar, "Point Color in Deadzone"); ImGui::SameLine();
-	if (ImGui::Button("Match Point Color")) { colorDeadzoneCvar.setValue(colorPointCvar.getColorValue()); }
+	if (ImGui::Button("Match Point")) { colorDeadzoneCvar.setValue(colorPointCvar.getColorValue()); } ImGui::SameLine();
+	if (ImGui::Button("Reset##DeadzoneColor")) { colorDeadzoneCvar.ResetToDefault(); }
+
+	CVarWrapper colorPointJumpCvar = cvarManager->getCvar(JOYSTICK_VIS_COLOR_JUMP);
+	RenderColorEdit(colorPointJumpCvar, "Point Color for Flips"); ImGui::SameLine();
+	if (ImGui::Button("Reset##JumpColor")) { colorPointJumpCvar.ResetToDefault(); }
 
 	RenderSeparator();
 	ImGui::Text("Sizing");
@@ -86,6 +91,9 @@ void JoystickVisualizationPlugin::RenderSettings() {
 
 	CVarWrapper pointSizeCvar = cvarManager->getCvar(JOYSTICK_VIS_POINT_SIZE);
 	RenderSliderPercentage(pointSizeCvar, "Size of Points Relative to Box", 0, 10);
+
+	CVarWrapper pointJumpSizeCvar = cvarManager->getCvar(JOYSTICK_VIS_JUMP_SIZE);
+	RenderSliderPercentage(pointJumpSizeCvar, "Size of Points for Flips Relative to Box", 0, 20);
 
 	RenderSeparator();
 	ImGui::Text("Tips");
