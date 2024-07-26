@@ -4,6 +4,7 @@
 #include "bakkesmod/plugin/pluginwindow.h"
 #include "bakkesmod/plugin/PluginSettingsWindow.h"
 #include "GuiBase.h"
+#include "PersistentStorage.h"
 
 #include "version.h"
 constexpr auto plugin_version = stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR) "." stringify(VERSION_PATCH) "." stringify(VERSION_BUILD);
@@ -36,6 +37,8 @@ struct HistoryItem {
 
 class JoystickVisualizationPlugin : public BakkesMod::Plugin::BakkesModPlugin, public SettingsWindowBase
 {
+	std::shared_ptr<PersistentStorage> persistentStorage;
+
 	std::vector<HistoryItem> inputHistory;
 
 	std::shared_ptr<bool> enabled;

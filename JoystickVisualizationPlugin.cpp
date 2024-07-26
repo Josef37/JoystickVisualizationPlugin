@@ -9,6 +9,9 @@ bool DoubleJumped;
 bool IsDodging;
 
 void JoystickVisualizationPlugin::onLoad() {
+	// This line is required for `LOG()` to work and must be before any use of `LOG()`.
+	_globalCvarManager = cvarManager;
+
 	// Record input and determine if it caused a dodge or double jump.
 	// That's why we also hook into the "Post" event.
 	gameWrapper->HookEventWithCaller<CarWrapper>(
@@ -30,6 +33,8 @@ void JoystickVisualizationPlugin::onLoad() {
 		}
 	);
 
+	persistentStorage = std::make_shared<PersistentStorage>(this, "joystick_vis", true, true);
+
 	enabled = std::make_shared<bool>(true);
 	numberOfPoints = std::make_shared<int>(120);
 	boxSize = std::make_shared<int>(400);
@@ -45,9 +50,9 @@ void JoystickVisualizationPlugin::onLoad() {
 	pointDeadzoneColor = std::make_shared<LinearColor>();
 	pointJumpColor = std::make_shared<LinearColor>();
 
-	cvarManager->registerCvar(JOYSTICK_VIS_ENABLED, "1", "Show Joystick Visualization", true, true, 0, true, 1)
+	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_ENABLED, "1", "Show Joystick Visualization", true, true, 0, true, 1)
 		.bindTo(enabled);
-	cvarManager->registerCvar(JOYSTICK_VIS_POINT_COUNT, "120", "Number of Inputs to Visualize", true, true, 1)
+	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_POINT_COUNT, "120", "Number of Inputs to Visualize", true, true, 1)
 		.addOnValueChanged(
 			[this](std::string oldValue, CVarWrapper cvar) {
 				int newNumberOfPoints = cvar.getIntValue();
@@ -55,29 +60,29 @@ void JoystickVisualizationPlugin::onLoad() {
 				inputHistory.reserve(newNumberOfPoints);
 			}
 		);
-	cvarManager->registerCvar(JOYSTICK_VIS_SIZE, "400", "Joystick Visualization Size", true, true, 10)
+	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_SIZE, "400", "Joystick Visualization Size", true, true, 10)
 		.bindTo(boxSize);
-	cvarManager->registerCvar(JOYSTICK_VIS_SENSITIVITY, "0", "Scale Input with Aerial Sensitivity", true, true, 0, true, 1)
+	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_SENSITIVITY, "0", "Scale Input with Aerial Sensitivity", true, true, 0, true, 1)
 		.bindTo(useSensitivity);
-	cvarManager->registerCvar(JOYSTICK_VIS_CLAMP, "1", "Clamp Values to Max Input", true, true, 0, true, 1)
+	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_CLAMP, "1", "Clamp Values to Max Input", true, true, 0, true, 1)
 		.bindTo(clampInput);
-	cvarManager->registerCvar(JOYSTICK_VIS_POINT_SIZE, "0.015", "Size of Points Relative to Box", true, true, 0, true, 1)
+	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_POINT_SIZE, "0.015", "Size of Points Relative to Box", true, true, 0, true, 1)
 		.bindTo(pointPercentage);
-	cvarManager->registerCvar(JOYSTICK_VIS_JUMP_SIZE, "0.05", "Size of Points for Flips Relative to Box", true, true, 0, true, 1)
+	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_JUMP_SIZE, "0.05", "Size of Points for Flips Relative to Box", true, true, 0, true, 1)
 		.bindTo(pointJumpPercentage);
-	cvarManager->registerCvar(JOYSTICK_VIS_CENTER_X, "0.5", "Center of the Visualization - X", true, true, 0, true, 1)
+	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_CENTER_X, "0.5", "Center of the Visualization - X", true, true, 0, true, 1)
 		.bindTo(centerX);
-	cvarManager->registerCvar(JOYSTICK_VIS_CENTER_Y, "0.5", "Center of the Visualization - Y", true, true, 0, true, 1)
+	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_CENTER_Y, "0.5", "Center of the Visualization - Y", true, true, 0, true, 1)
 		.bindTo(centerY);
-	cvarManager->registerCvar(JOYSTICK_VIS_FILL_BOX, "0", "Fill Box", true, true, 0, true, 1)
+	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_FILL_BOX, "0", "Fill Box", true, true, 0, true, 1)
 		.bindTo(fillBox);
-	cvarManager->registerCvar(JOYSTICK_VIS_COLOR_BOX, "#FFFFFF64", "Box Color")
+	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_COLOR_BOX, "#FFFFFF64", "Box Color")
 		.bindTo(boxColor);
-	cvarManager->registerCvar(JOYSTICK_VIS_COLOR_POINT, "#FFFFFF", "Point Color")
+	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_COLOR_POINT, "#FFFFFF", "Point Color")
 		.bindTo(pointColor);
-	cvarManager->registerCvar(JOYSTICK_VIS_COLOR_DEADZONE, "#AAFFAA", "Point Color in Deadzone")
+	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_COLOR_DEADZONE, "#AAFFAA", "Point Color in Deadzone")
 		.bindTo(pointDeadzoneColor);
-	cvarManager->registerCvar(JOYSTICK_VIS_COLOR_JUMP, "#FF0000", "Point Color for Flips")
+	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_COLOR_JUMP, "#FF0000", "Point Color for Flips")
 		.bindTo(pointJumpColor);
 
 	inputHistory.reserve(*numberOfPoints);

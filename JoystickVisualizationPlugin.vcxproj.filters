@@ -34,6 +34,9 @@
     <Filter Include="Plugin\src">
       <UniqueIdentifier>{33ae5c6a-718c-410e-bdb8-9c032f65c710}</UniqueIdentifier>
     </Filter>
+    <Filter Include="PersistentStorage">
+      <UniqueIdentifier>{8c348bf8-07fc-4d75-a986-0b076f9b005c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="imgui\imgui.cpp">
@@ -83,6 +86,9 @@
     </ClCompile>
     <ClCompile Include="JoystickVisualizationPluginSettings.cpp">
       <Filter>Plugin\src</Filter>
+    </ClCompile>
+    <ClCompile Include="PersistentStorage.cpp">
+      <Filter>PersistentStorage</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -142,6 +148,9 @@
     </ClInclude>
     <ClInclude Include="GuiBase.h">
       <Filter>Plugin\header</Filter>
+    </ClInclude>
+    <ClInclude Include="PersistentStorage.h">
+      <Filter>PersistentStorage</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

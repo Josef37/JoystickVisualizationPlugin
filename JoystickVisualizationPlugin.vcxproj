@@ -111,6 +111,7 @@
     </ClCompile>
     <ClCompile Include="JoystickVisualizationPlugin.cpp" />
     <ClCompile Include="GuiBase.cpp" />
+    <ClCompile Include="PersistentStorage.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imconfig.h" />
@@ -131,6 +132,7 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="GuiBase.h" />
     <ClInclude Include="JoystickVisualizationPlugin.h" />
+    <ClInclude Include="PersistentStorage.h" />
     <ClInclude Include="version.h" />
   </ItemGroup>
   <ItemGroup>
