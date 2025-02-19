@@ -96,17 +96,18 @@ void JoystickVisualizationPlugin::RenderSettings() {
 	RenderSliderPercentage(pointJumpSizeCvar, "Size of Points for Flips Relative to Box", 0, 20);
 
 	RenderSeparator();
-	ImGui::Text("Tips");
-	ImGui::Text(
-		"- Joystick should trace smooth and consistent lines.\n"
-		"- Jagged / inconsistent traces may indicate controller needs to be repaired or replaced. Try using compressed air to clean out the sensor.\n"
-		"- Try rotating the joystick all the way around edge in a circle.\n"
-		"- The default deadzone shape and sensitivity should trace a circle.\n"
-		"- Setting a higher sensitivity with an external tool (such as DS4Win or Steam controller config) will increase the size of circle and cut off edges.\n"
-		"- A squared deadzone (configured in external tools) should instead trace a square.\n"
-		"- The visualization ignores inputs within the deadzone. Only inputs affecting the movement of the car are shown. This is a limitation in Bakkesmod.\n"
-		"- See plugin homepage for examples and more information�."
-	);
+
+	if(ImGui::TreeNode("Tips")) {
+		ImGui::BulletText("Joystick should trace smooth and consistent lines.");
+		ImGui::BulletText("Jagged / inconsistent traces may indicate controller needs to be repaired or replaced. Try using compressed air to clean out the sensor.");
+		ImGui::BulletText("Try rotating the joystick all the way around edge in a circle.");
+		ImGui::BulletText("The default deadzone shape and sensitivity should trace a circle.");
+		ImGui::BulletText("Setting a higher sensitivity with an external tool (such as DS4Win or Steam controller config) will increase the size of circle and cut off edges.");
+		ImGui::BulletText("A squared deadzone (configured in external tools) should instead trace a square.");
+		ImGui::BulletText("The visualization ignores inputs within the deadzone. Only inputs affecting the movement of the car are shown. This is a limitation in Bakkesmod.");
+		ImGui::BulletText("See plugin homepage for examples and more information.");
+		ImGui::TreePop();
+	}
 
 	RenderSeparator();
 	ImGui::Text("Originally created by @AlpacaFlightSim, improved upon by @Brotzeitsepp.");
