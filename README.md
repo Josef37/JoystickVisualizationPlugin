@@ -1,9 +1,16 @@
 # Joystick Visualization Plugin
 
-Works with Bakkesmod / Rocket League.
+This is a plugin for Rocket League (BakkesMod) which shows you how the game registers your joystick inputs.
 
-This plugin improves upon [Joystick Self-Check](https://bakkesplugins.com/plugins/view/54) by allowing more settings.
+This plugin improves upon [Joystick Self-Check](https://bakkesplugins.com/plugins/view/54) [(Source)](https://github.com/kcolton/JoystickSelfCheckPlugin) from @AlpacaFlightSim by allowing more settings.
 
-![RocketLeagueJoystickVisualization](https://github.com/user-attachments/assets/014417a6-7ebd-4a7a-9d44-eb9fbbf6bb76)
+![joystick-visualization](https://github.com/user-attachments/assets/9df23c49-8761-48ee-aa0d-dc9533e61894)
 
-I was simply interested in learning how to program within Rocket League. So don't expect too much :)
+## Improvements over the original
+
+- More configuration options, especially colors
+- Settings are saved between sessions
+- Option to scale with sensitivity
+- Deadzone highlighting
+- Jump/flip highlighting
+- More precise drawing
