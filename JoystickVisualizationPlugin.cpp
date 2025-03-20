@@ -16,14 +16,14 @@ void JoystickVisualizationPlugin::onLoad() {
 	// That's why we also hook into the "Post" event.
 	gameWrapper->HookEventWithCaller<CarWrapper>(
 		"Function TAGame.Car_TA.SetVehicleInput",
-		[this](CarWrapper cw, void* params, std::string eventname) {
-			OnSetInput(&cw, (ControllerInput*)params);
+		[this](CarWrapper car, void* params, std::string eventName) {
+			OnSetInput(car, (ControllerInput*)params);
 		}
 	);
 	gameWrapper->HookEventWithCallerPost<CarWrapper>(
 		"Function TAGame.Car_TA.SetVehicleInput",
-		[this](CarWrapper cw, void* params, std::string eventname) {
-			OnSetInputPost(&cw, (ControllerInput*)params);
+		[this](CarWrapper car, void* params, std::string eventName) {
+			OnSetInputPost(car, (ControllerInput*)params);
 		}
 	);
 
@@ -98,30 +98,36 @@ bool JoystickVisualizationPlugin::isActive() {
 		&& *enabled;
 }
 
-void JoystickVisualizationPlugin::OnSetInput(CarWrapper* cw, ControllerInput* ci) {
-	if (!isActive()) {
+bool JoystickVisualizationPlugin::isLocalCar(CarWrapper& car) {
+	auto localCar = gameWrapper->GetLocalCar();
+	if (!localCar) return false;
+	return car.memory_address == localCar.memory_address;
+}
+
+void JoystickVisualizationPlugin::OnSetInput(CarWrapper& car, ControllerInput* input) {
+	if (!isActive() || !isLocalCar(car)) {
 		return;
 	}
 
 	// `ControllerInput->Jumped` is only true when the jump button is initially pressed.
 	// We record the values for double jump and dodging before the processing takes places to compare them later.
-	if (ci->Jumped) {
-		DoubleJumped = cw->GetbDoubleJumped();
-		IsDodging = cw->IsDodging();
+	if (input->Jumped) {
+		DoubleJumped = car.GetbDoubleJumped();
+		IsDodging = car.IsDodging();
 	}
 }
 
-void JoystickVisualizationPlugin::OnSetInputPost(CarWrapper* cw, ControllerInput* ci) {
-	if (!isActive()) {
+void JoystickVisualizationPlugin::OnSetInputPost(CarWrapper& car, ControllerInput* input) {
+	if (!isActive() || !isLocalCar(car)) {
 		return;
 	}
 
 	// We compare the values for the same input event before and after processing.
 	// This way we can determine if the current jump input causes a double jump or dodge.
 	// `ControllerInput->Jumped` is only true when the jump button is initially pressed.
-	JumpType jumpType = !ci->Jumped ? JumpType::Other
-		: !IsDodging && cw->IsDodging() ? JumpType::Dodge
-		: !DoubleJumped && cw->GetbDoubleJumped() ? JumpType::Double
+	JumpType jumpType = !input->Jumped ? JumpType::Other
+		: !IsDodging && car.IsDodging() ? JumpType::Dodge
+		: !DoubleJumped && car.GetbDoubleJumped() ? JumpType::Double
 		: JumpType::Other;
 
 	if (inputHistory.size() >= *numberOfPoints) {
@@ -129,10 +135,10 @@ void JoystickVisualizationPlugin::OnSetInputPost(CarWrapper* cw, ControllerInput
 		inputHistory.erase(inputHistory.begin(), inputHistory.begin() + numToRemove);
 	}
 
-	inputHistory.push_back({ jumpType, *ci });
+	inputHistory.push_back({ jumpType, *input });
 }
 
-void JoystickVisualizationPlugin::Render(CanvasWrapper canvas) {
+void JoystickVisualizationPlugin::Render(CanvasWrapper& canvas) {
 	if (!isActive()) {
 		return;
 	}

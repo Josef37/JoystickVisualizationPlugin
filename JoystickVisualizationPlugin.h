@@ -1,8 +1,6 @@
 #pragma once
 
 #include "bakkesmod/plugin/bakkesmodplugin.h"
-#include "bakkesmod/plugin/pluginwindow.h"
-#include "bakkesmod/plugin/PluginSettingsWindow.h"
 #include "GuiBase.h"
 #include "PersistentStorage.h"
 
@@ -58,9 +56,13 @@ class JoystickVisualizationPlugin : public BakkesMod::Plugin::BakkesModPlugin, p
 
 	void onLoad() override;
 	void onUnload() override;
-	void OnSetInput(CarWrapper* cw, ControllerInput* ci);
-	void OnSetInputPost(CarWrapper* cw, ControllerInput* ci);
-	void Render(CanvasWrapper canvas);
-	void RenderSettings() override;
+
+	void OnSetInput(CarWrapper& car, ControllerInput* input);
+	void OnSetInputPost(CarWrapper& car, ControllerInput* input);
+
 	bool isActive();
+	bool isLocalCar(CarWrapper& car);
+
+	void Render(CanvasWrapper& canvas);
+	void RenderSettings() override;
 };
