@@ -53,13 +53,7 @@ void JoystickVisualizationPlugin::onLoad() {
 	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_ENABLED, "1", "Show Joystick Visualization", true, true, 0, true, 1)
 		.bindTo(enabled);
 	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_POINT_COUNT, "120", "Number of Inputs to Visualize", true, true, 1)
-		.addOnValueChanged(
-			[this](std::string oldValue, CVarWrapper cvar) {
-				int newNumberOfPoints = cvar.getIntValue();
-				*numberOfPoints = newNumberOfPoints;
-				inputHistory.reserve(newNumberOfPoints);
-			}
-		);
+		.bindTo(numberOfPoints);
 	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_SIZE, "400", "Joystick Visualization Size", true, true, 10)
 		.bindTo(boxSize);
 	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_SENSITIVITY, "0", "Scale Input with Aerial Sensitivity", true, true, 0, true, 1)
@@ -84,8 +78,6 @@ void JoystickVisualizationPlugin::onLoad() {
 		.bindTo(pointDeadzoneColor);
 	persistentStorage->RegisterPersistentCvar(JOYSTICK_VIS_COLOR_JUMP, "#FF0000", "Point Color for Flips")
 		.bindTo(pointJumpColor);
-
-	inputHistory.reserve(*numberOfPoints);
 }
 
 void JoystickVisualizationPlugin::onUnload() {
@@ -130,12 +122,11 @@ void JoystickVisualizationPlugin::OnSetInputPost(CarWrapper& car, ControllerInpu
 		: !DoubleJumped && car.GetbDoubleJumped() ? JumpType::Double
 		: JumpType::Other;
 
-	if (inputHistory.size() >= *numberOfPoints) {
-		int numToRemove = 1 + inputHistory.size() - *numberOfPoints;
-		inputHistory.erase(inputHistory.begin(), inputHistory.begin() + numToRemove);
-	}
-
 	inputHistory.push_back({ jumpType, *input });
+
+	while (inputHistory.size() > *numberOfPoints) {
+		inputHistory.pop_front();
+	}
 }
 
 void JoystickVisualizationPlugin::Render(CanvasWrapper& canvas) {
@@ -182,9 +173,8 @@ void JoystickVisualizationPlugin::Render(CanvasWrapper& canvas) {
 		color.A *= opacity;
 		canvas.SetColor(color);
 		float pointSize = *boxSize * (jumped ? *pointJumpPercentage : *pointPercentage);
-		Vector2F offset = Vector2F(pointSize / 2, pointSize / 2);
-		canvas.SetPosition(currentPos - offset);
-		canvas.FillBox(Vector2F(pointSize, pointSize));
+		canvas.SetPosition(currentPos - (pointSize / 2));
+		canvas.FillBox(Vector2F(1, 1) * pointSize);
 
 		if (i > 0) {
 			canvas.DrawLine(currentPos, prevPos);

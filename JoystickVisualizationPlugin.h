@@ -37,7 +37,7 @@ class JoystickVisualizationPlugin : public BakkesMod::Plugin::BakkesModPlugin, p
 {
 	std::shared_ptr<PersistentStorage> persistentStorage;
 
-	std::vector<HistoryItem> inputHistory;
+	std::list<HistoryItem> inputHistory;
 
 	std::shared_ptr<bool> enabled;
 	std::shared_ptr<int> numberOfPoints;
